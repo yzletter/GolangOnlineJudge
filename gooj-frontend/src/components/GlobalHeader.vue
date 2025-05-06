@@ -1,12 +1,6 @@
 <template>
   <div>
-    <a-row
-      id="globalHeader"
-      class="grid-demo"
-      style="margin-bottom: 16px"
-      align="center"
-    >
-      <!--      <a-col flex="100px"> </a-col>-->
+    <a-row id="globalHeader" class="grid-demo" align="center" :wrap="false">
       <a-col flex="auto">
         <a-menu
           mode="horizontal"
@@ -23,7 +17,8 @@
               <div class="title">GoOJ</div>
             </div>
           </a-menu-item>
-          <a-menu-item v-for="item in routes" :key="item.path">
+          <!-- 菜单 -->
+          <a-menu-item v-for="item in visibleRoutes" :key="item.path">
             {{ item.name }}
           </a-menu-item>
         </a-menu>
@@ -40,15 +35,33 @@
 <script setup lang="ts">
 import { routes } from "../router/routes";
 import { useRoute, useRouter } from "vue-router";
-import { ref } from "vue";
+import { computed, ref } from "vue";
 import { useStore } from "vuex";
+import checkAccess from "@/access/checkAccess";
+import ACCESS_ENUM from "@/access/accessEnum";
 
 const router = useRouter();
 const store = useStore();
 // 默认主页
 const selectedKeys = ref(["/"]);
 
-// 跳转路由更新菜单
+// 用于在 Menu 中展示的页面
+const visibleRoutes = computed(() => {
+  return routes.filter((item, index) => {
+    if (item.meta?.hideInMenu) {
+      return false;
+    }
+    // todo 根据权限校验可见页面
+    if (
+      !checkAccess(store.state.user?.loginUser, item.meta?.access as string)
+    ) {
+      return false;
+    }
+    return true;
+  });
+});
+
+// 跳转路由更新菜单高亮
 router.afterEach((to, from, failure) => {
   selectedKeys.value = [to.path];
 });
@@ -56,7 +69,7 @@ router.afterEach((to, from, failure) => {
 setTimeout(() => {
   store.dispatch("user/getLoginUser", {
     userName: "yzletter",
-    role: "admin",
+    userRole: ACCESS_ENUM.ADMIN,
   });
 }, 3000);
 
@@ -70,7 +83,6 @@ const doMenuClick = (key: string) => {
 <style scoped>
 .title-bar {
   display: flex;
-
   align-items: center;
 }
 
